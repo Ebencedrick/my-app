@@ -1,14 +1,15 @@
+"use client"
 import React, { useState } from 'react'
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
 
   const navItems = [
-    { name: 'Home', href: '#home' },
+    { name: 'Home', href: '/' },
     { name: 'About', href: '#about' },
-    { name: 'Projects', href: '#projects' },
-    { name: 'Skills', href: '#skills' },
-    { name: 'Contact', href: '#contact' }
+    { name: 'Projects', href: '/projects' },
+    { name: 'Skills', href: '/#skills' },
+    { name: 'Contact', href: '/#contact' }
   ]
 
   return (
