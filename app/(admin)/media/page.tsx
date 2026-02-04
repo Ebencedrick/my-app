@@ -1,137 +1,162 @@
 "use client"
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { MediaFile } from '@/lib/types'
 
 const Media = () => {
   const [selectedType, setSelectedType] = useState('all')
   const [selectedView, setSelectedView] = useState('grid')
   const [searchTerm, setSearchTerm] = useState('')
-  const [selectedMedia, setSelectedMedia] = useState(null)
+  const [selectedMedia, setSelectedMedia] = useState<any>(null)
   const [isUploading, setIsUploading] = useState(false)
+  const [showUploadModal, setShowUploadModal] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const [mediaFiles, setMediaFiles] = useState<any[]>([])
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
+  const [uploadProgress, setUploadProgress] = useState(0)
+  const [successMessage, setSuccessMessage] = useState('')
+  const [errorMessage, setErrorMessage] = useState('')
+  const [uploadFormData, setUploadFormData] = useState({
+    tags: '',
+    category: 'Uncategorized',
+    uploadedBy: 'Admin'
+  })
 
-  const mediaFiles = [
-    {
-      id: 1,
-      name: 'hero-banner.jpg',
-      type: 'image',
-      size: '2.4 MB',
-      dimensions: '1920x1080',
-      uploadedDate: '2024-02-15',
-      uploadedBy: 'John Doe',
-      url: '/images/hero-banner.jpg',
-      thumbnail: '/images/thumbnails/hero-banner.jpg',
-      tags: ['banner', 'hero', 'landing'],
-      category: 'Marketing',
-      downloads: 45,
-      views: 234
-    },
-    {
-      id: 2,
-      name: 'product-demo.mp4',
-      type: 'video',
-      size: '15.8 MB',
-      duration: '2:45',
-      uploadedDate: '2024-02-14',
-      uploadedBy: 'Jane Smith',
-      url: '/videos/product-demo.mp4',
-      thumbnail: '/videos/thumbnails/product-demo.jpg',
-      tags: ['demo', 'product', 'tutorial'],
-      category: 'Product',
-      downloads: 23,
-      views: 156
-    },
-    {
-      id: 3,
-      name: 'company-logo.svg',
-      type: 'image',
-      size: '124 KB',
-      dimensions: '512x512',
-      uploadedDate: '2024-02-13',
-      uploadedBy: 'Diana Prince',
-      url: '/images/company-logo.svg',
-      thumbnail: '/images/thumbnails/company-logo.jpg',
-      tags: ['logo', 'brand', 'company'],
-      category: 'Branding',
-      downloads: 67,
-      views: 445
-    },
-    {
-      id: 4,
-      name: 'user-guide.pdf',
-      type: 'document',
-      size: '3.2 MB',
-      pages: 24,
-      uploadedDate: '2024-02-12',
-      uploadedBy: 'Bob Johnson',
-      url: '/documents/user-guide.pdf',
-      thumbnail: '/documents/thumbnails/user-guide.jpg',
-      tags: ['guide', 'documentation', 'manual'],
-      category: 'Documentation',
-      downloads: 89,
-      views: 234
-    },
-    {
-      id: 5,
-      name: 'team-photo.jpg',
-      type: 'image',
-      size: '4.1 MB',
-      dimensions: '3000x2000',
-      uploadedDate: '2024-02-11',
-      uploadedBy: 'Alice Brown',
-      url: '/images/team-photo.jpg',
-      thumbnail: '/images/thumbnails/team-photo.jpg',
-      tags: ['team', 'photo', 'company'],
-      category: 'Company',
-      downloads: 34,
-      views: 178
-    },
-    {
-      id: 6,
-      name: 'podcast-episode-1.mp3',
-      type: 'audio',
-      size: '8.9 MB',
-      duration: '45:30',
-      uploadedDate: '2024-02-10',
-      uploadedBy: 'Charlie Wilson',
-      url: '/audio/podcast-episode-1.mp3',
-      thumbnail: '/audio/thumbnails/podcast-episode-1.jpg',
-      tags: ['podcast', 'audio', 'episode'],
-      category: 'Content',
-      downloads: 12,
-      views: 89
-    },
-    {
-      id: 7,
-      name: 'infographic-design.png',
-      type: 'image',
-      size: '1.8 MB',
-      dimensions: '1080x1920',
-      uploadedDate: '2024-02-09',
-      uploadedBy: 'John Doe',
-      url: '/images/infographic-design.png',
-      thumbnail: '/images/thumbnails/infographic-design.jpg',
-      tags: ['infographic', 'design', 'data'],
-      category: 'Marketing',
-      downloads: 56,
-      views: 267
-    },
-    {
-      id: 8,
-      name: 'presentation-slides.pptx',
-      type: 'document',
-      size: '5.6 MB',
-      slides: 32,
-      uploadedDate: '2024-02-08',
-      uploadedBy: 'Jane Smith',
-      url: '/documents/presentation-slides.pptx',
-      thumbnail: '/documents/thumbnails/presentation-slides.jpg',
-      tags: ['presentation', 'slides', 'business'],
-      category: 'Business',
-      downloads: 78,
-      views: 345
+  // Fetch media files from API
+  useEffect(() => {
+    fetchMediaFiles()
+  }, [])
+
+  const fetchMediaFiles = async () => {
+    try {
+      setIsLoading(true)
+      const response = await fetch('/api/media')
+      const data = await response.json()
+      
+      if (data.success && data.data) {
+        // Transform API data to match the page format
+        const transformedFiles = data.data.map((file: MediaFile) => ({
+          id: file._id,
+          name: file.originalName || file.name,
+          type: file.type,
+          size: file.sizeFormatted || formatFileSize(file.size),
+          dimensions: file.dimensions,
+          duration: file.duration,
+          pages: file.pages,
+          slides: file.slides,
+          uploadedDate: file.uploadedDate || (file.createdAt ? new Date(file.createdAt).toISOString().split('T')[0] : ''),
+          uploadedBy: file.uploadedBy || 'Admin',
+          url: file.url,
+          thumbnail: file.thumbnail || file.url,
+          tags: file.tags || [],
+          category: file.category || 'Uncategorized',
+          downloads: file.downloads || 0,
+          views: file.views || 0,
+          _id: file._id,
+          ...file
+        }))
+        setMediaFiles(transformedFiles)
+      }
+    } catch (error) {
+      console.error('Error fetching media files:', error)
+      setErrorMessage('Failed to load media files')
+    } finally {
+      setIsLoading(false)
     }
-  ]
+  }
 
-  const filteredMedia = mediaFiles.filter(file => {
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 Bytes'
+    const k = 1024
+    const sizes = ['Bytes', 'KB', 'MB', 'GB']
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i]
+  }
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const files = Array.from(e.target.files)
+      setSelectedFiles(files)
+    }
+  }
+
+  const handleUpload = async () => {
+    if (selectedFiles.length === 0) {
+      setErrorMessage('Please select at least one file to upload')
+      return
+    }
+
+    setIsUploading(true)
+    setUploadProgress(0)
+    setErrorMessage('')
+    setSuccessMessage('')
+
+    try {
+      const uploadPromises = selectedFiles.map(async (file, index) => {
+        const formData = new FormData()
+        formData.append('file', file)
+        formData.append('tags', uploadFormData.tags)
+        formData.append('category', uploadFormData.category)
+        formData.append('uploadedBy', uploadFormData.uploadedBy)
+
+        const response = await fetch('/api/media', {
+          method: 'POST',
+          body: formData,
+        })
+
+        const data = await response.json()
+
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to upload file')
+        }
+
+        // Update progress
+        setUploadProgress(((index + 1) / selectedFiles.length) * 100)
+
+        return data.data
+      })
+
+      await Promise.all(uploadPromises)
+
+      setSuccessMessage(`Successfully uploaded ${selectedFiles.length} file(s)!`)
+      setSelectedFiles([])
+      setUploadFormData({ tags: '', category: 'Uncategorized', uploadedBy: 'Admin' })
+      
+      // Refresh media files list
+      await fetchMediaFiles()
+      
+      // Close modal after a short delay
+      setTimeout(() => {
+        setIsUploading(false)
+        setTimeout(() => setSuccessMessage(''), 5000)
+      }, 1000)
+    } catch (error: any) {
+      console.error('Error uploading files:', error)
+      setErrorMessage(error.message || 'Failed to upload files. Please try again.')
+    } finally {
+      setIsUploading(false)
+      setUploadProgress(0)
+    }
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    
+    if (e.dataTransfer.files) {
+      const files = Array.from(e.dataTransfer.files)
+      setSelectedFiles(prev => [...prev, ...files])
+    }
+  }
+
+  // Fallback to empty array if no files
+  const displayFiles = mediaFiles.length > 0 ? mediaFiles : []
+
+  const filteredMedia = displayFiles.filter(file => {
     const matchesType = selectedType === 'all' || file.type === selectedType
     const matchesSearch = file.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          file.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -160,12 +185,43 @@ const Media = () => {
     }
   }
 
-  const formatFileSize = (size: string) => {
-    return size
-  }
 
   return (
     <div className="space-y-6">
+      {/* Success Message */}
+      {successMessage && (
+        <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg flex items-center justify-between">
+          <div className="flex items-center">
+            <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+            </svg>
+            <span>{successMessage}</span>
+          </div>
+          <button onClick={() => setSuccessMessage('')} className="text-green-600 hover:text-green-800">
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+            </svg>
+          </button>
+        </div>
+      )}
+
+      {/* Error Message */}
+      {errorMessage && (
+        <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg flex items-center justify-between">
+          <div className="flex items-center">
+            <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+            </svg>
+            <span>{errorMessage}</span>
+          </div>
+          <button onClick={() => setErrorMessage('')} className="text-red-600 hover:text-red-800">
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+            </svg>
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
@@ -177,7 +233,7 @@ const Media = () => {
             Bulk Actions
           </button>
           <button 
-            onClick={() => setIsUploading(true)}
+            onClick={() => setShowUploadModal(true)}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
           >
             Upload Files
@@ -191,7 +247,7 @@ const Media = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Total Files</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{mediaFiles.length}</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{isLoading ? '...' : displayFiles.length}</p>
             </div>
             <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
               <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -206,7 +262,7 @@ const Media = () => {
             <div>
               <p className="text-sm font-medium text-gray-600">Images</p>
               <p className="text-2xl font-bold text-gray-900 mt-1">
-                {mediaFiles.filter(f => f.type === 'image').length}
+                {isLoading ? '...' : displayFiles.filter(f => f.type === 'image').length}
               </p>
             </div>
             <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
@@ -222,7 +278,7 @@ const Media = () => {
             <div>
               <p className="text-sm font-medium text-gray-600">Videos</p>
               <p className="text-2xl font-bold text-gray-900 mt-1">
-                {mediaFiles.filter(f => f.type === 'video').length}
+                {isLoading ? '...' : displayFiles.filter(f => f.type === 'video').length}
               </p>
             </div>
             <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -258,7 +314,7 @@ const Media = () => {
                 placeholder="Search media files by name, tags, category, or uploader..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder:text-gray-900"
               />
               <svg
                 className="absolute left-3 top-2.5 w-5 h-5 text-gray-400"
@@ -275,7 +331,7 @@ const Media = () => {
             <select
               value={selectedType}
               onChange={(e) => setSelectedType(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
             >
               <option value="all">All Types</option>
               <option value="image">Images</option>
@@ -287,7 +343,11 @@ const Media = () => {
             <div className="flex bg-gray-100 rounded-lg p-1">
               <button
                 onClick={() => setSelectedView('grid')}
-                className={`px-3 py-1 rounded ${selectedView === 'grid' ? 'bg-white shadow-sm' : ''}`}
+                className={`px-3 py-1 rounded flex items-center justify-center ${
+                  selectedView === 'grid' 
+                    ? 'bg-white shadow-sm text-blue-600' 
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
+                }`}
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
@@ -295,7 +355,11 @@ const Media = () => {
               </button>
               <button
                 onClick={() => setSelectedView('list')}
-                className={`px-3 py-1 rounded ${selectedView === 'list' ? 'bg-white shadow-sm' : ''}`}
+                className={`px-3 py-1 rounded flex items-center justify-center ${
+                  selectedView === 'list' 
+                    ? 'bg-white shadow-sm text-blue-600' 
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
+                }`}
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -306,12 +370,20 @@ const Media = () => {
         </div>
 
         <div className="mt-4 text-sm text-gray-600">
-          Showing {filteredMedia.length} of {mediaFiles.length} files
+          Showing {filteredMedia.length} of {displayFiles.length} files
         </div>
       </div>
 
+      {/* Loading State */}
+      {isLoading && (
+        <div className="bg-white rounded-lg shadow-sm p-12 text-center">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <p className="mt-4 text-gray-600">Loading media files...</p>
+        </div>
+      )}
+
       {/* Grid View */}
-      {selectedView === 'grid' && (
+      {!isLoading && selectedView === 'grid' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {filteredMedia.map((file) => (
             <div key={file.id} className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden">
@@ -372,7 +444,7 @@ const Media = () => {
       )}
 
       {/* List View */}
-      {selectedView === 'list' && (
+      {!isLoading && selectedView === 'list' && (
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
@@ -596,15 +668,37 @@ const Media = () => {
         </div>
       )}
 
+      {/* Empty State */}
+      {!isLoading && displayFiles.length === 0 && (
+        <div className="bg-white rounded-lg shadow-sm p-12 text-center">
+          <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No media files found</h3>
+          <p className="text-gray-600 mb-4">Get started by uploading your first file</p>
+          <button 
+            onClick={() => setShowUploadModal(true)}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+          >
+            Upload Files
+          </button>
+        </div>
+      )}
+
       {/* Upload Modal */}
-      {isUploading && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg max-w-2xl w-full mx-4">
+      {showUploadModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-bold text-gray-900">Upload Files</h2>
                 <button 
-                  onClick={() => setIsUploading(false)}
+                  onClick={() => {
+                    setShowUploadModal(false)
+                    setSelectedFiles([])
+                    setErrorMessage('')
+                    setUploadFormData({ tags: '', category: 'Uncategorized', uploadedBy: 'Admin' })
+                  }}
                   className="text-gray-400 hover:text-gray-600"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -613,36 +707,140 @@ const Media = () => {
                 </button>
               </div>
 
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                </svg>
-                <div className="mt-4">
-                  <label htmlFor="file-upload" className="cursor-pointer">
-                    <span className="mt-2 block text-sm font-medium text-gray-900">
-                      Click to upload or drag and drop
-                    </span>
-                    <span className="mt-1 block text-xs text-gray-500">
-                      PNG, JPG, GIF, MP4, PDF, DOC up to 10MB
-                    </span>
-                    <input id="file-upload" name="file-upload" type="file" className="sr-only" multiple />
-                  </label>
+              {/* Upload Form */}
+              <div className="space-y-6">
+                {/* File Drop Zone */}
+                <div 
+                  className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors"
+                  onDragOver={handleDragOver}
+                  onDrop={handleDrop}
+                >
+                  <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                  </svg>
+                  <div className="mt-4">
+                    <label htmlFor="file-upload" className="cursor-pointer">
+                      <span className="mt-2 block text-sm font-medium text-gray-900">
+                        Click to upload or drag and drop
+                      </span>
+                      <span className="mt-1 block text-xs text-gray-500">
+                        PNG, JPG, GIF, MP4, PDF, DOC up to 10MB
+                      </span>
+                      <input 
+                        id="file-upload" 
+                        name="file-upload" 
+                        type="file" 
+                        className="sr-only" 
+                        multiple 
+                        onChange={handleFileSelect}
+                      />
+                    </label>
+                  </div>
                 </div>
-              </div>
 
-              <div className="flex justify-end space-x-3 mt-6">
-                <button 
-                  onClick={() => setIsUploading(false)}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button 
-                  onClick={() => setIsUploading(false)}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                >
-                  Upload Files
-                </button>
+                {/* Selected Files List */}
+                {selectedFiles.length > 0 && (
+                  <div className="border border-gray-200 rounded-lg p-4">
+                    <h3 className="text-sm font-medium text-gray-900 mb-3">Selected Files ({selectedFiles.length})</h3>
+                    <div className="space-y-2 max-h-40 overflow-y-auto">
+                      {selectedFiles.map((file, index) => (
+                        <div key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                          <div className="flex items-center space-x-2">
+                            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                            </svg>
+                            <span className="text-sm text-gray-900 truncate">{file.name}</span>
+                            <span className="text-xs text-gray-500">({formatFileSize(file.size)})</span>
+                          </div>
+                          <button
+                            onClick={() => setSelectedFiles(prev => prev.filter((_, i) => i !== index))}
+                            className="text-red-600 hover:text-red-800"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Upload Progress */}
+                {uploadProgress > 0 && uploadProgress < 100 && (
+                  <div>
+                    <div className="flex justify-between text-sm text-gray-600 mb-2">
+                      <span>Uploading...</span>
+                      <span>{Math.round(uploadProgress)}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${uploadProgress}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Metadata Fields */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="tags" className="block text-sm font-medium text-gray-700 mb-2">
+                      Tags (comma-separated)
+                    </label>
+                    <input
+                      type="text"
+                      id="tags"
+                      value={uploadFormData.tags}
+                      onChange={(e) => setUploadFormData(prev => ({ ...prev, tags: e.target.value }))}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-gray-900"
+                      placeholder="banner, hero, landing"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-2">
+                      Category
+                    </label>
+                    <input
+                      type="text"
+                      id="category"
+                      value={uploadFormData.category}
+                      onChange={(e) => setUploadFormData(prev => ({ ...prev, category: e.target.value }))}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-gray-900"
+                      placeholder="Marketing"
+                    />
+                  </div>
+                </div>
+
+                {errorMessage && (
+                  <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg">
+                    {errorMessage}
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="flex justify-end space-x-3 pt-4 border-t">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowUploadModal(false)
+                      setSelectedFiles([])
+                      setErrorMessage('')
+                      setUploadFormData({ tags: '', category: 'Uncategorized', uploadedBy: 'Admin' })
+                    }}
+                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleUpload}
+                    disabled={isUploading || selectedFiles.length === 0}
+                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isUploading ? 'Uploading...' : `Upload ${selectedFiles.length} File(s)`}
+                  </button>
+                </div>
               </div>
             </div>
           </div>

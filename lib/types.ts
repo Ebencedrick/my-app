@@ -49,6 +49,31 @@ export interface ContactSubmission {
   updatedAt?: Date
 }
 
+// Media Types
+export interface MediaFile {
+  _id?: string
+  name: string
+  originalName: string
+  type: 'image' | 'video' | 'audio' | 'document'
+  mimeType: string
+  size: number // in bytes
+  sizeFormatted?: string // formatted like "2.4 MB"
+  url: string
+  thumbnail?: string
+  dimensions?: string
+  duration?: string
+  pages?: number
+  slides?: number
+  tags: string[]
+  category?: string
+  uploadedBy?: string
+  uploadedDate?: string
+  downloads?: number
+  views?: number
+  createdAt?: Date
+  updatedAt?: Date
+}
+
 // API Response Types
 export interface ApiResponse<T> {
   success: boolean

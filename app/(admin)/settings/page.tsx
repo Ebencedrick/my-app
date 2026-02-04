@@ -4,6 +4,17 @@ import React, { useState } from 'react'
 const Settings = () => {
   const [activeTab, setActiveTab] = useState('general')
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
+  const [uploadProgress, setUploadProgress] = useState(0)
+  const [successMessage, setSuccessMessage] = useState('')
+  const [errorMessage, setErrorMessage] = useState('')
+  const [uploadFormData, setUploadFormData] = useState({
+    tags: '',
+    category: 'Settings',
+    uploadedBy: 'Admin',
+  })
 
   const generalSettings = [
     {
@@ -109,7 +120,7 @@ const Settings = () => {
             type={setting.type}
             defaultValue={setting.value}
             onChange={() => setHasUnsavedChanges(true)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
           />
         )
       case 'textarea':
@@ -118,7 +129,7 @@ const Settings = () => {
             rows={3}
             defaultValue={setting.value}
             onChange={() => setHasUnsavedChanges(true)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
           />
         )
       case 'number':
@@ -127,7 +138,7 @@ const Settings = () => {
             type="number"
             defaultValue={setting.value}
             onChange={() => setHasUnsavedChanges(true)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
           />
         )
       case 'select':
@@ -135,7 +146,7 @@ const Settings = () => {
           <select
             defaultValue={setting.value}
             onChange={() => setHasUnsavedChanges(true)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
           >
             {setting.options?.map((option: string) => (
               <option key={option} value={option}>{option}</option>
@@ -172,8 +183,128 @@ const Settings = () => {
     }
   }
 
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 Bytes'
+    const k = 1024
+    const sizes = ['Bytes', 'KB', 'MB', 'GB']
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i]
+  }
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setSelectedFiles(Array.from(e.target.files))
+    }
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    if (e.dataTransfer.files) {
+      const files = Array.from(e.dataTransfer.files)
+      setSelectedFiles((prev) => [...prev, ...files])
+    }
+  }
+
+  const handleUpload = async () => {
+    if (selectedFiles.length === 0) {
+      setErrorMessage('Please select at least one file to upload')
+      return
+    }
+
+    setIsUploading(true)
+    setUploadProgress(0)
+    setErrorMessage('')
+    setSuccessMessage('')
+
+    try {
+      const uploadPromises = selectedFiles.map(async (file, index) => {
+        const formData = new FormData()
+        formData.append('file', file)
+        formData.append('tags', uploadFormData.tags)
+        formData.append('category', uploadFormData.category)
+        formData.append('uploadedBy', uploadFormData.uploadedBy)
+
+        const response = await fetch('/api/media', {
+          method: 'POST',
+          body: formData,
+        })
+
+        const data = await response.json()
+
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to upload file')
+        }
+
+        setUploadProgress(((index + 1) / selectedFiles.length) * 100)
+        return data.data
+      })
+
+      await Promise.all(uploadPromises)
+
+      setSuccessMessage(`Successfully uploaded ${selectedFiles.length} file(s)!`)
+      setSelectedFiles([])
+      setUploadFormData({ tags: '', category: 'Settings', uploadedBy: 'Admin' })
+      setIsUploadModalOpen(false)
+      setTimeout(() => setSuccessMessage(''), 5000)
+    } catch (err: any) {
+      console.error('Upload failed:', err)
+      setErrorMessage(err?.message || 'Failed to upload files. Please try again.')
+    } finally {
+      setIsUploading(false)
+      setUploadProgress(0)
+    }
+  }
+
+  const closeUploadModal = () => {
+    setIsUploadModalOpen(false)
+    setSelectedFiles([])
+    setErrorMessage('')
+    setUploadProgress(0)
+  }
+
   return (
     <div className="space-y-6">
+      {/* Success Message */}
+      {successMessage && (
+        <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg flex items-center justify-between">
+          <div className="flex items-center">
+            <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+            </svg>
+            <span>{successMessage}</span>
+          </div>
+          <button onClick={() => setSuccessMessage('')} className="text-green-600 hover:text-green-800">
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+            </svg>
+          </button>
+        </div>
+      )}
+
+      {/* Error Message */}
+      {errorMessage && (
+        <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg flex items-center justify-between">
+          <div className="flex items-center">
+            <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+            </svg>
+            <span>{errorMessage}</span>
+          </div>
+          <button onClick={() => setErrorMessage('')} className="text-red-600 hover:text-red-800">
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+            </svg>
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
@@ -186,6 +317,12 @@ const Settings = () => {
               Unsaved changes
             </span>
           )}
+          <button
+            onClick={() => setIsUploadModalOpen(true)}
+            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors duration-200"
+          >
+            Upload Files
+          </button>
           <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors duration-200">
             Reset to Defaults
           </button>
@@ -206,7 +343,7 @@ const Settings = () => {
                 className={`py-4 px-1 border-b-2 font-medium text-sm capitalize ${
                   activeTab === tab
                     ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-300'
                 }`}
               >
                 {tab}
@@ -297,6 +434,144 @@ const Settings = () => {
           </div>
         </div>
       </div>
+
+      {/* Upload Modal */}
+      {isUploadModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-gray-900">Upload Files</h2>
+                <button
+                  onClick={closeUploadModal}
+                  className="text-gray-400 hover:text-gray-600"
+                  disabled={isUploading}
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                <div
+                  className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors"
+                  onDragOver={handleDragOver}
+                  onDrop={handleDrop}
+                >
+                  <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                  </svg>
+                  <div className="mt-4">
+                    <label htmlFor="settings-file-upload" className="cursor-pointer">
+                      <span className="mt-2 block text-sm font-medium text-gray-900">Click to upload or drag and drop</span>
+                      <span className="mt-1 block text-xs text-gray-500">PNG, JPG, GIF, MP4, PDF, DOC up to 10MB</span>
+                      <input
+                        id="settings-file-upload"
+                        type="file"
+                        className="sr-only"
+                        multiple
+                        onChange={handleFileSelect}
+                        disabled={isUploading}
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                {selectedFiles.length > 0 && (
+                  <div className="border border-gray-200 rounded-lg p-4">
+                    <h3 className="text-sm font-medium text-gray-900 mb-3">Selected Files ({selectedFiles.length})</h3>
+                    <div className="space-y-2 max-h-40 overflow-y-auto">
+                      {selectedFiles.map((file, index) => (
+                        <div key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                          <div className="flex items-center space-x-2">
+                            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                            </svg>
+                            <span className="text-sm text-gray-900 truncate">{file.name}</span>
+                            <span className="text-xs text-gray-500">({formatFileSize(file.size)})</span>
+                          </div>
+                          <button
+                            onClick={() => setSelectedFiles((prev) => prev.filter((_, i) => i !== index))}
+                            className="text-red-600 hover:text-red-800"
+                            disabled={isUploading}
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {uploadProgress > 0 && uploadProgress < 100 && (
+                  <div>
+                    <div className="flex justify-between text-sm text-gray-600 mb-2">
+                      <span>Uploading...</span>
+                      <span>{Math.round(uploadProgress)}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div className="bg-blue-600 h-2 rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="settings-tags" className="block text-sm font-medium text-gray-700 mb-2">
+                      Tags (comma-separated)
+                    </label>
+                    <input
+                      id="settings-tags"
+                      type="text"
+                      value={uploadFormData.tags}
+                      onChange={(e) => setUploadFormData((prev) => ({ ...prev, tags: e.target.value }))}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-gray-900"
+                      placeholder="settings, json, backup"
+                      disabled={isUploading}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="settings-category" className="block text-sm font-medium text-gray-700 mb-2">
+                      Category
+                    </label>
+                    <input
+                      id="settings-category"
+                      type="text"
+                      value={uploadFormData.category}
+                      onChange={(e) => setUploadFormData((prev) => ({ ...prev, category: e.target.value }))}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-gray-900"
+                      placeholder="Settings"
+                      disabled={isUploading}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end space-x-3 pt-4 border-t">
+                  <button
+                    type="button"
+                    onClick={closeUploadModal}
+                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+                    disabled={isUploading}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleUpload}
+                    disabled={isUploading || selectedFiles.length === 0}
+                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isUploading ? 'Uploading...' : `Upload ${selectedFiles.length} File(s)`}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

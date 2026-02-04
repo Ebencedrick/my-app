@@ -224,7 +224,7 @@ const Logs = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Critical</p>
-              <p className="text-2xl font-bold text-red-900">{logStats.critical}</p>
+              <p className="text-2xl font-bold text-gray-900">{logStats.critical}</p>
             </div>
             <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
               <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -238,7 +238,7 @@ const Logs = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Errors</p>
-              <p className="text-2xl font-bold text-orange-900">{logStats.errors}</p>
+              <p className="text-2xl font-bold text-gray-900">{logStats.errors}</p>
             </div>
             <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
               <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -252,7 +252,7 @@ const Logs = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Warnings</p>
-              <p className="text-2xl font-bold text-yellow-900">{logStats.warnings}</p>
+              <p className="text-2xl font-bold text-gray-900">{logStats.warnings}</p>
             </div>
             <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center">
               <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -301,7 +301,7 @@ const Logs = () => {
                 placeholder="Search logs by message, details, or user..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder:text-gray-900"
               />
               <svg
                 className="absolute left-3 top-2.5 w-5 h-5 text-gray-400"
@@ -318,7 +318,7 @@ const Logs = () => {
             <select
               value={dateRange}
               onChange={(e) => setDateRange(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
             >
               <option value="1h">Last Hour</option>
               <option value="24h">Last 24 Hours</option>
@@ -329,7 +329,7 @@ const Logs = () => {
             <select
               value={selectedLevel}
               onChange={(e) => setSelectedLevel(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
             >
               <option value="all">All Levels</option>
               <option value="critical">Critical</option>
@@ -342,7 +342,7 @@ const Logs = () => {
             <select
               value={selectedSource}
               onChange={(e) => setSelectedSource(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
             >
               <option value="all">All Sources</option>
               <option value="Database">Database</option>
@@ -369,25 +369,25 @@ const Logs = () => {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                   Timestamp
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                   Level
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                   Source
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                   Message
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                   User
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
@@ -414,7 +414,7 @@ const Logs = () => {
                   <td className="px-6 py-4">
                     <div>
                       <div className="text-sm font-medium text-gray-900">{log.message}</div>
-                      <div className="text-sm text-gray-500">{log.details}</div>
+                      <div className="text-sm text-gray-600">{log.details}</div>
                     </div>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">
@@ -480,19 +480,19 @@ const Logs = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-1">Timestamp</h3>
+                  <h3 className="text-sm font-medium text-gray-600 mb-1">Timestamp</h3>
                   <p className="text-gray-900">{selectedLog.timestamp}</p>
                 </div>
                 <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-1">Source</h3>
+                  <h3 className="text-sm font-medium text-gray-600 mb-1">Source</h3>
                   <p className="text-gray-900">{selectedLog.source}</p>
                 </div>
                 <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-1">User ID</h3>
+                  <h3 className="text-sm font-medium text-gray-600 mb-1">User ID</h3>
                   <p className="text-gray-900">{selectedLog.userId}</p>
                 </div>
                 <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-1">IP Address</h3>
+                  <h3 className="text-sm font-medium text-gray-600 mb-1">IP Address</h3>
                   <p className="text-gray-900">{selectedLog.ip}</p>
                 </div>
               </div>
