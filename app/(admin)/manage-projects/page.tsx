@@ -1,109 +1,166 @@
 "use client"
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { Project } from '@/lib/types'
 
 const AdminProjects = () => {
   const [selectedStatus, setSelectedStatus] = useState('all')
   const [searchTerm, setSearchTerm] = useState('')
-  const [selectedProject, setSelectedProject] = useState(null)
+  const [selectedProject, setSelectedProject] = useState<any>(null)
+  const [projects, setProjects] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [successMessage, setSuccessMessage] = useState('')
+  const [errorMessage, setErrorMessage] = useState('')
+  
+  const [formData, setFormData] = useState({
+    title: '',
+    category: 'web' as 'web' | 'mobile' | 'design' | 'backend',
+    description: '',
+    technologies: '',
+    features: '',
+    liveUrl: '',
+    githubUrl: '',
+    status: 'planned' as 'completed' | 'in-progress' | 'planned',
+    year: new Date().getFullYear().toString(),
+    image: ''
+  })
 
-  const projects = [
-    {
-      id: 1,
-      name: 'E-Commerce Platform',
-      description: 'Full-featured e-commerce solution with payment processing and inventory management',
-      status: 'active',
-      priority: 'high',
-      progress: 85,
-      startDate: '2024-01-15',
-      deadline: '2024-03-30',
-      budget: '$45,000',
-      team: ['John Doe', 'Jane Smith', 'Bob Johnson'],
-      technologies: ['React', 'Node.js', 'MongoDB', 'Stripe'],
-      lastUpdated: '2024-02-15',
-      views: 4532,
-      completion: 85
-    },
-    {
-      id: 2,
-      name: 'Mobile Banking App',
-      description: 'Secure mobile banking application with biometric authentication',
-      status: 'active',
-      priority: 'critical',
-      progress: 92,
-      startDate: '2023-11-01',
-      deadline: '2024-02-28',
-      budget: '$120,000',
-      team: ['Alice Brown', 'Charlie Wilson', 'Diana Prince'],
-      technologies: ['React Native', 'Firebase', 'Node.js', 'PostgreSQL'],
-      lastUpdated: '2024-02-14',
-      views: 3214,
-      completion: 92
-    },
-    {
-      id: 3,
-      name: 'Analytics Dashboard',
-      description: 'Real-time analytics dashboard with data visualization',
-      status: 'active',
-      priority: 'medium',
-      progress: 78,
-      startDate: '2024-02-01',
-      deadline: '2024-04-15',
-      budget: '$35,000',
-      team: ['Eve Adams', 'Frank Miller'],
-      technologies: ['Vue.js', 'D3.js', 'Python', 'Redis'],
-      lastUpdated: '2024-02-13',
-      views: 2876,
-      completion: 78
-    },
-    {
-      id: 4,
-      name: 'Content Management System',
-      description: 'Enterprise CMS with workflow automation',
-      status: 'completed',
-      priority: 'low',
-      progress: 100,
-      startDate: '2023-09-01',
-      deadline: '2023-12-15',
-      budget: '$28,000',
-      team: ['Grace Lee', 'Henry Ford'],
-      technologies: ['Next.js', 'TypeScript', 'MongoDB', 'AWS'],
-      lastUpdated: '2023-12-10',
-      views: 2154,
-      completion: 100
-    },
-    {
-      id: 5,
-      name: 'User Portal Redesign',
-      description: 'Complete redesign of user portal with modern UI/UX',
-      status: 'planning',
-      priority: 'medium',
-      progress: 15,
-      startDate: '2024-02-20',
-      deadline: '2024-05-30',
-      budget: '$22,000',
-      team: ['Iris West', 'Jack Ryan'],
-      technologies: ['React', 'Tailwind CSS', 'Figma', 'Node.js'],
-      lastUpdated: '2024-02-12',
-      views: 1892,
-      completion: 15
-    },
-    {
-      id: 6,
-      name: 'API Gateway Service',
-      description: 'Microservices API gateway with authentication and rate limiting',
-      status: 'on-hold',
-      priority: 'low',
-      progress: 45,
-      startDate: '2023-12-01',
-      deadline: '2024-03-01',
-      budget: '$18,000',
-      team: ['Kate Bishop'],
-      technologies: ['Go', 'Docker', 'Kubernetes', 'PostgreSQL'],
-      lastUpdated: '2024-01-20',
-      views: 1234,
-      completion: 45
+  // Fetch projects from API
+  useEffect(() => {
+    fetchProjects()
+  }, [])
+
+  const fetchProjects = async () => {
+    try {
+      setIsLoading(true)
+      const response = await fetch('/api/projects')
+      const data = await response.json()
+      
+      if (data.success && data.data) {
+        // Transform API data to match the admin page format
+        const transformedProjects = data.data.map((project: Project, index: number) => ({
+          id: project._id || index + 1,
+          name: project.title,
+          description: project.description,
+          status: project.status === 'completed' ? 'completed' : 
+                  project.status === 'in-progress' ? 'active' : 
+                  project.status === 'planned' ? 'planning' : 'on-hold',
+          priority: 'medium',
+          progress: project.status === 'completed' ? 100 : 
+                   project.status === 'in-progress' ? 50 : 
+                   project.status === 'planned' ? 0 : 0,
+          startDate: project.createdAt ? new Date(project.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+          deadline: '',
+          budget: '$0',
+          team: [],
+          technologies: project.technologies || [],
+          lastUpdated: project.updatedAt ? new Date(project.updatedAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+          views: 0,
+          completion: project.status === 'completed' ? 100 : 
+                     project.status === 'in-progress' ? 50 : 0,
+          _id: project._id,
+          ...project
+        }))
+        setProjects(transformedProjects)
+      }
+    } catch (error) {
+      console.error('Error fetching projects:', error)
+      setErrorMessage('Failed to load projects')
+    } finally {
+      setIsLoading(false)
     }
-  ]
+  }
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }))
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSubmitting(true)
+    setSuccessMessage('')
+    setErrorMessage('')
+
+    try {
+      // Parse technologies and features from comma-separated strings
+      const technologies = formData.technologies.split(',').map(tech => tech.trim()).filter(tech => tech)
+      const features = formData.features.split(',').map(feature => feature.trim()).filter(feature => feature)
+
+      const projectData: Project = {
+        title: formData.title,
+        category: formData.category,
+        description: formData.description,
+        technologies: technologies,
+        features: features,
+        liveUrl: formData.liveUrl || undefined,
+        githubUrl: formData.githubUrl || undefined,
+        status: formData.status,
+        year: formData.year,
+        image: formData.image || undefined
+      }
+
+      const response = await fetch('/api/projects', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(projectData),
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        setSuccessMessage('Project added successfully!')
+        // Reset form
+        setFormData({
+          title: '',
+          category: 'web',
+          description: '',
+          technologies: '',
+          features: '',
+          liveUrl: '',
+          githubUrl: '',
+          status: 'planned',
+          year: new Date().getFullYear().toString(),
+          image: ''
+        })
+        setIsModalOpen(false)
+        // Refresh projects list
+        await fetchProjects()
+        // Clear success message after 5 seconds
+        setTimeout(() => setSuccessMessage(''), 5000)
+      } else {
+        setErrorMessage(data.error || 'Failed to add project')
+      }
+    } catch (error) {
+      console.error('Error adding project:', error)
+      setErrorMessage('An error occurred while adding the project')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false)
+    setFormData({
+      title: '',
+      category: 'web',
+      description: '',
+      technologies: '',
+      features: '',
+      liveUrl: '',
+      githubUrl: '',
+      status: 'planned',
+      year: new Date().getFullYear().toString(),
+      image: ''
+    })
+    setErrorMessage('')
+  }
 
   const filteredProjects = projects.filter(project => {
     const matchesStatus = selectedStatus === 'all' || project.status === selectedStatus
@@ -142,6 +199,40 @@ const AdminProjects = () => {
 
   return (
     <div className="space-y-6">
+      {/* Success Message */}
+      {successMessage && (
+        <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg flex items-center justify-between">
+          <div className="flex items-center">
+            <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+            </svg>
+            <span>{successMessage}</span>
+          </div>
+          <button onClick={() => setSuccessMessage('')} className="text-green-600 hover:text-green-800">
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+            </svg>
+          </button>
+        </div>
+      )}
+
+      {/* Error Message */}
+      {errorMessage && (
+        <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg flex items-center justify-between">
+          <div className="flex items-center">
+            <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+            </svg>
+            <span>{errorMessage}</span>
+          </div>
+          <button onClick={() => setErrorMessage('')} className="text-red-600 hover:text-red-800">
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+            </svg>
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
@@ -152,7 +243,10 @@ const AdminProjects = () => {
           <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors duration-200">
             Import
           </button>
-          <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200">
+          <button 
+            onClick={() => setIsModalOpen(true)}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+          >
             New Project
           </button>
         </div>
@@ -164,7 +258,7 @@ const AdminProjects = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Total Projects</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{projects.length}</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{isLoading ? '...' : projects.length}</p>
             </div>
             <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
               <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -179,7 +273,7 @@ const AdminProjects = () => {
             <div>
               <p className="text-sm font-medium text-gray-600">Active</p>
               <p className="text-2xl font-bold text-gray-900 mt-1">
-                {projects.filter(p => p.status === 'active').length}
+                {isLoading ? '...' : projects.filter(p => p.status === 'active' || p.status === 'in-progress').length}
               </p>
             </div>
             <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
@@ -195,7 +289,7 @@ const AdminProjects = () => {
             <div>
               <p className="text-sm font-medium text-gray-600">Completed</p>
               <p className="text-2xl font-bold text-gray-900 mt-1">
-                {projects.filter(p => p.status === 'completed').length}
+                {isLoading ? '...' : projects.filter(p => p.status === 'completed').length}
               </p>
             </div>
             <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -266,10 +360,19 @@ const AdminProjects = () => {
         </div>
       </div>
 
+      {/* Loading State */}
+      {isLoading && (
+        <div className="bg-white rounded-lg shadow-sm p-12 text-center">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <p className="mt-4 text-gray-600">Loading projects...</p>
+        </div>
+      )}
+
       {/* Projects Table */}
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
+      {!isLoading && (
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -376,7 +479,242 @@ const AdminProjects = () => {
             </tbody>
           </table>
         </div>
-      </div>
+        </div>
+      )}
+
+      {/* Empty State */}
+      {!isLoading && projects.length === 0 && (
+        <div className="bg-white rounded-lg shadow-sm p-12 text-center">
+          <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+          </svg>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No projects found</h3>
+          <p className="text-gray-600 mb-4">Get started by adding your first project</p>
+          <button 
+            onClick={() => setIsModalOpen(true)}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+          >
+            Add Project
+          </button>
+        </div>
+      )}
+
+      {/* Add Project Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-start mb-6">
+                <h2 className="text-2xl font-bold text-gray-900">Add New Project</h2>
+                <button 
+                  onClick={handleCloseModal}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
+                      Project Title <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      id="title"
+                      name="title"
+                      value={formData.title}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="E-Commerce Platform"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-2">
+                      Category <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      id="category"
+                      name="category"
+                      value={formData.category}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="web">Web Development</option>
+                      <option value="mobile">Mobile Apps</option>
+                      <option value="design">UI/UX Design</option>
+                      <option value="backend">Backend</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
+                    Description <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    id="description"
+                    name="description"
+                    value={formData.description}
+                    onChange={handleInputChange}
+                    required
+                    rows={4}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Describe your project..."
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label htmlFor="technologies" className="block text-sm font-medium text-gray-700 mb-2">
+                      Technologies (comma-separated)
+                    </label>
+                    <input
+                      type="text"
+                      id="technologies"
+                      name="technologies"
+                      value={formData.technologies}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="React, Node.js, MongoDB"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">Separate multiple technologies with commas</p>
+                  </div>
+
+                  <div>
+                    <label htmlFor="features" className="block text-sm font-medium text-gray-700 mb-2">
+                      Features (comma-separated)
+                    </label>
+                    <input
+                      type="text"
+                      id="features"
+                      name="features"
+                      value={formData.features}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="User Authentication, Payment Integration"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">Separate multiple features with commas</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label htmlFor="liveUrl" className="block text-sm font-medium text-gray-700 mb-2">
+                      Live URL
+                    </label>
+                    <input
+                      type="url"
+                      id="liveUrl"
+                      name="liveUrl"
+                      value={formData.liveUrl}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="https://example.com"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="githubUrl" className="block text-sm font-medium text-gray-700 mb-2">
+                      GitHub URL
+                    </label>
+                    <input
+                      type="url"
+                      id="githubUrl"
+                      name="githubUrl"
+                      value={formData.githubUrl}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="https://github.com/username/repo"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div>
+                    <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-2">
+                      Status <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      id="status"
+                      name="status"
+                      value={formData.status}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="planned">Planned</option>
+                      <option value="in-progress">In Progress</option>
+                      <option value="completed">Completed</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label htmlFor="year" className="block text-sm font-medium text-gray-700 mb-2">
+                      Year <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      id="year"
+                      name="year"
+                      value={formData.year}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="2024"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="image" className="block text-sm font-medium text-gray-700 mb-2">
+                      Image URL
+                    </label>
+                    <input
+                      type="url"
+                      id="image"
+                      name="image"
+                      value={formData.image}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="/images/project.jpg"
+                    />
+                  </div>
+                </div>
+
+                {errorMessage && (
+                  <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg">
+                    {errorMessage}
+                  </div>
+                )}
+
+                <div className="flex justify-end space-x-3 pt-4 border-t">
+                  <button
+                    type="button"
+                    onClick={handleCloseModal}
+                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+                    disabled={isSubmitting}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isSubmitting ? 'Saving...' : 'Save Project'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Project Detail Modal */}
       {selectedProject && (
